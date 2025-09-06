@@ -1,6 +1,11 @@
+
 # Importando Bibliotecas
 import whisper
 import gradio as gr
+import static_ffmpeg
+
+# Adicionando ffmpeg aos paths do sistema
+static_ffmpeg.add_paths()
 
 # Define o modelo da I.A como "base"
 model = whisper.load_model("base")
