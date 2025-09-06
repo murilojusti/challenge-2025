@@ -1,5 +1,6 @@
 # Importando Bibliotecas
 import whisper
+import gradio as gr
 
 # Define o modelo da I.A como "base"
 model = whisper.load_model("base")
@@ -20,3 +21,11 @@ def transcribe(audio):
     
     # Retorna a transcrição
     return result.text
+
+gr.Interface(
+    fn=transcribe,
+    inputs=gr.Audio(type="filepath"),
+    outputs=gr.Textbox(),
+    title="OpenAI Whisper ASR Gradio Web UI",
+    live=True
+).launch()
