@@ -3,12 +3,9 @@
 import whisper
 import gradio as gr
 import static_ffmpeg
+import pandas as pd
 
-# Adicionando ffmpeg aos paths do sistema
-static_ffmpeg.add_paths()
 
-# Define o modelo da I.A como "base"
-model = whisper.load_model("base")
 
 def transcribe(audio):
     
@@ -27,6 +24,13 @@ def transcribe(audio):
     # Retorna a transcrição
     return result.text
 
+# Adicionando ffmpeg aos paths do sistema
+static_ffmpeg.add_paths()
+
+# Define o modelo da I.A como "base"
+model = whisper.load_model("base")
+
+# Cria interface web
 gr.Interface(
     fn=transcribe,
     inputs=gr.Audio(type="filepath"),
@@ -34,3 +38,9 @@ gr.Interface(
     title="OpenAI Whisper ASR Gradio Web UI",
     live=True
 ).launch()
+
+# Manipulação da planilha de estoque
+df = pd.read_excel('estoque.xlsx')
+
+# Salvar de volta
+df.to_excel("estoque.xlsx", index=False)
