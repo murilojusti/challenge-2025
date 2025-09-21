@@ -80,6 +80,25 @@ def interpretar_comando(transcrito):
 def pipeline(audio):
     transcricao = transcribe(audio)
     comando_json = interpretar_comando(transcricao)
+
+    # Carrega estoque
+    df = pd.read_excel("estoque.xlsx")
+
+    # Normaliza item para garantir compatibilidade
+    item = comando_json["item"].upper()
+
+    if item not in df.columns:
+        return transcricao, {"erro": f"Item {item} não encontrado no estoque."}
+
+    # Atualiza estoque
+    if comando_json["acao"] == "adicionar":
+        df.loc[0, item] += comando_json["quantidade"]
+    elif comando_json["acao"] == "retirar":
+        df.loc[0, item] -= comando_json["quantidade"]
+
+    # Salva de volta
+    df.to_excel("estoque.xlsx", index=False)
+
     return transcricao, comando_json
 
 # Adicionando ffmpeg aos paths do sistema
@@ -96,10 +115,3 @@ gr.Interface(
     title="OpenAI Whisper + Gemini Estoque",
     live=True
 ).launch()
-
-# Manipulação da planilha de estoque
-df = pd.read_excel('estoque.xlsx')
-
-
-# Salvar de volta
-df.to_excel("estoque.xlsx", index=False)
