@@ -25,8 +25,10 @@ def transcribe(audio):
     options = whisper.DecodingOptions(language="pt")
     result = whisper.decode(model, mel, options)
     
+    transcricao = result.text
+    
     # Retorna a transcrição
-    return result.text
+    return transcricao
 
 
 def interpretar_comando(transcrito):
@@ -75,27 +77,29 @@ def interpretar_comando(transcrito):
 
     return resposta_json
 
-interpretar_comando('colocar cinco seringas')
+def pipeline(audio):
+    transcricao = transcribe(audio)
+    comando_json = interpretar_comando(transcricao)
+    return transcricao, comando_json
 
-# # Adicionando ffmpeg aos paths do sistema
-# static_ffmpeg.add_paths()
+# Adicionando ffmpeg aos paths do sistema
+static_ffmpeg.add_paths()
 
-# # Define o modelo da I.A como "base"
-# model = whisper.load_model("base")
+# Define o modelo da I.A como "base"
+model = whisper.load_model("base")
 
-# # Cria interface web
-# gr.Interface(
-#     fn=transcribe,
-#     inputs=gr.Audio(type="filepath"),
-#     outputs=gr.Textbox(),
-#     title="OpenAI Whisper ASR Gradio Web UI",
-#     live=True
-# ).launch()
+# Cria interface web
+gr.Interface(
+    fn=pipeline,
+    inputs=gr.Audio(type="filepath"),
+    outputs=[gr.Textbox(label="Transcrição"), gr.JSON(label="Interpretação")],
+    title="OpenAI Whisper + Gemini Estoque",
+    live=True
+).launch()
 
-# # Manipulação da planilha de estoque
-# df = pd.read_excel('estoque.xlsx')
+# Manipulação da planilha de estoque
+df = pd.read_excel('estoque.xlsx')
 
 
-
-# # Salvar de volta
-# df.to_excel("estoque.xlsx", index=False)
+# Salvar de volta
+df.to_excel("estoque.xlsx", index=False)
