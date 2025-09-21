@@ -7,6 +7,7 @@ import pandas as pd
 from google import genai
 import os
 from dotenv import load_dotenv
+import json
 
 load_dotenv() # Carrega o env
 
@@ -34,34 +35,47 @@ def interpretar_comando(transcrito):
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents= f"""Você é um assistente que interpreta pedidos de controle de estoque hospitalar.
-                    Corrija eventuais erros de transcrição e retorne um JSON no seguinte formato:
+                    Corrija eventuais erros de transcrição e retorne apenas um JSON no seguinte formato:
 
-                    {
+                    {{
                       "acao": "adicionar ou retirar",
                       "quantidade": número inteiro,
                       "item": "nome do insumo"
-                    }
+                    }}
 
                     Exemplo:
                     Entrada: "dar baixa em duas seringas"
                     Saída:
-                    {
+                    {{
                       "acao": "retirar",
                       "quantidade": 2,
                       "item": "seringa"
-                    }
+                    }}
 
                     Para 'acao' você deve retornar exatamente 'adicionar' ou 'retirar' dependendo do contexto.
                     Para 'quantidade' você deve retornar a quantidade exata que entender no contexto
                     Para 'item' você deve retornar uma dessas opções exatamente como está escrito a seguir: 'SERINGAS', 'GAZES', 'LUVAS', 'TUBOS_DE_COLETA'.
-                    
+                    Tudo o que você deve retornar é o JSON, nem uma palavra a mais.
+
                     Agora, interprete o seguinte {transcrito}
                     """,
     )
 
-    print(response.text)
+    # pegar texto cru
+    resposta_texto = response.candidates[0].content.parts[0].text.strip()
 
-interpretar_comando('dar baixa em três tubos')
+    # remover crases e "json" do bloco markdown
+    if resposta_texto.startswith("```"):
+        resposta_texto = resposta_texto.strip("`")  # tira as crases
+        resposta_texto = resposta_texto.replace("json", "", 1).strip()  # tira o "json" inicial, se tiver
+
+    # carregar como json
+    resposta_json = json.loads(resposta_texto)
+    print( resposta_json)
+
+    return resposta_json
+
+interpretar_comando('colocar cinco seringas')
 
 # # Adicionando ffmpeg aos paths do sistema
 # static_ffmpeg.add_paths()
