@@ -37,32 +37,45 @@ def interpretar_comando(transcrito):
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents= f"""Você é um assistente que interpreta pedidos de controle de estoque hospitalar.
-                    Corrija eventuais erros de transcrição e retorne apenas um JSON no seguinte formato:
+                    Corrija eventuais erros de transcrição e retorne apenas uma **LISTA de JSONs** no seguinte formato:
 
-                    {{
-                      "acao": "adicionar ou retirar",
-                      "quantidade": número inteiro,
-                      "item": "nome do insumo"
-                    }}
+                    [
+                      {{
+                        "acao": "adicionar ou retirar",
+                        "quantidade": número inteiro,
+                        "item": "nome do insumo"
+                      }},
+                      {{
+                        "acao": "...",
+                        "quantidade": ...,
+                        "item": "..."
+                      }}
+                    ]
 
                     Exemplo:
-                    Entrada: "dar baixa em duas seringas"
+                    Entrada: "tirei duas luvas e uma gaze"
                     Saída:
-                    {{
-                      "acao": "retirar",
-                      "quantidade": 2,
-                      "item": "seringa"
-                    }}
+                    [
+                      {{
+                        "acao": "retirar",
+                        "quantidade": 2,
+                        "item": "LUVAS"
+                      }},
+                      {{
+                        "acao": "retirar",
+                        "quantidade": 1,
+                        "item": "GAZES"
+                      }}
+                    ]
 
-                    Para 'acao' você deve retornar exatamente 'adicionar' ou 'retirar' dependendo do contexto.
-                    Para 'quantidade' você deve retornar a quantidade exata que entender no contexto
-                    Para 'item' você deve retornar uma dessas opções exatamente como está escrito a seguir: 'SERINGAS', 'GAZES', 'LUVAS', 'TUBOS_DE_COLETA'.
-                    Tudo o que você deve retornar é o JSON, nem uma palavra a mais.
+                    Para 'acao' você deve retornar exatamente 'adicionar' ou 'retirar'.
+                    Para 'quantidade' sempre um inteiro.
+                    Para 'item' use exatamente uma dessas opções: 'SERINGAS', 'GAZES', 'LUVAS', 'TUBOS_DE_COLETA'.
+                    Retorne apenas a lista JSON, nada além disso.
 
-                    Agora, interprete o seguinte {transcrito}
+                    Agora, interprete o seguinte: {transcrito}
                     """,
-    )
-
+      )
     # pegar texto cru
     resposta_texto = response.candidates[0].content.parts[0].text.strip()
 
@@ -79,27 +92,26 @@ def interpretar_comando(transcrito):
 
 def pipeline(audio):
     transcricao = transcribe(audio)
-    comando_json = interpretar_comando(transcricao)
+    comandos = interpretar_comando(transcricao)  # agora vem lista de dicts
 
     # Carrega estoque
     df = pd.read_excel("estoque.xlsx")
 
-    # Normaliza item para garantir compatibilidade
-    item = comando_json["item"].upper()
+    for comando in comandos:
+        item = comando["item"].upper()
 
-    if item not in df.columns:
-        return transcricao, {"erro": f"Item {item} não encontrado no estoque."}
+        if item not in df.columns:
+            continue  # ignora item inválido
 
-    # Atualiza estoque
-    if comando_json["acao"] == "adicionar":
-        df.loc[0, item] += comando_json["quantidade"]
-    elif comando_json["acao"] == "retirar":
-        df.loc[0, item] -= comando_json["quantidade"]
+        if comando["acao"] == "adicionar":
+            df.loc[0, item] += comando["quantidade"]
+        elif comando["acao"] == "retirar":
+            df.loc[0, item] -= comando["quantidade"]
 
     # Salva de volta
     df.to_excel("estoque.xlsx", index=False)
 
-    return transcricao, comando_json
+    return transcricao, comandos
 
 # Adicionando ffmpeg aos paths do sistema
 static_ffmpeg.add_paths()
